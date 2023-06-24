@@ -20,6 +20,15 @@ struct Pool {
     uint256 interestRate;
 }
 
+struct Borrow {
+    /// @notice the pool ID to borrow from
+    bytes32 poolId;
+    /// @notice the amount to borrow
+    uint256 debt;
+    /// @notice the amount of collateral to put up
+    uint256 collateral;
+}
+
 struct Loan {
     /// @notice address of the lender
     address lender;
@@ -41,4 +50,15 @@ struct Loan {
     uint256 auctionStartTimestamp;
     /// @notice the refinance auction length
     uint256 auctionLength;
+}
+
+struct Refinance {
+    /// @notice the loan ID to refinance
+    uint256 loanId;
+    /// @notice the pool ID to refinance to
+    bytes32 poolId;
+    /// @notice the new desired debt amount
+    uint256 debt;
+    /// @notice the new desired collateral amount
+    uint256 collateral;
 }

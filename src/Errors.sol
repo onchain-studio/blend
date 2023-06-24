@@ -13,3 +13,4 @@ error AuctionNotStarted();
 error AuctionEnded();
 error AuctionNotEnded();
 error RateTooHigh();
+error PoolTooSmall();
