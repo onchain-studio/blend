@@ -311,6 +311,7 @@ contract Lender is Ownable {
         // validate the rate
         if (rate > currentAuctionRate) revert RateTooHigh();
         // calculate the interest
+        timeElapsed = block.timestamp - loan.startTimestamp;
         uint256 lenderInterest = ((loan.interestRate * loan.debt) / 10000) *
             (timeElapsed / 365 days);
         uint256 protocolInterest = ((fee * loan.debt) / 10000) *
