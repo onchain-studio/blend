@@ -93,7 +93,8 @@ contract Lender is Ownable {
         uint256 timeElapsed = block.timestamp - loan.startTimestamp;
         uint256 interest = ((loan.interestRate * loan.debt) / 10000) *
             (timeElapsed / 365 days);
-        debt = loan.debt + interest;
+        uint256 fees = ((fee * loan.debt) / 10000) * (timeElapsed / 365 days);
+        debt = loan.debt + interest + fees;
     }
 
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -168,6 +169,7 @@ contract Lender is Ownable {
             // validate the loan
             if (debt < pool.minLoanSize) revert LoanTooSmall();
             if (debt > pool.poolBalance) revert LoanTooLarge();
+            if (collateral == 0) revert ZeroCollateral();
             // make sure the user isn't borrowing too much
             uint256 loanRatio = (debt * 10 ** 18) / collateral;
             if (loanRatio > pool.maxLoanRatio) revert RatioTooHigh();
@@ -229,6 +231,7 @@ contract Lender is Ownable {
 
             // update the pool balance
             pools[poolId].poolBalance += loan.debt + lenderInterest;
+            emit PoolBalanceUpdated(poolId, pools[poolId].poolBalance);
 
             // transfer the loan tokens from the borrower to the pool
             IERC20(loan.loanToken).transferFrom(
@@ -236,7 +239,7 @@ contract Lender is Ownable {
                 address(this),
                 loan.debt + lenderInterest
             );
-            // transfer the protocol fee to the governance
+            // transfer the protocol fee to the fee receiver
             IERC20(loan.loanToken).transferFrom(
                 msg.sender,
                 feeReceiver,
@@ -331,11 +334,13 @@ contract Lender is Ownable {
             lenderInterest +
             protocolInterest;
         emit PoolBalanceUpdated(poolId, pools[poolId].poolBalance);
-        // transfer the loan tokens from the pool to the lender
-        IERC20(loan.loanToken).transfer(
-            loan.lender,
-            loan.debt + lenderInterest
+        // now update the pool balance of the old lender
+        bytes32 oldPoolId = keccak256(
+            abi.encode(loan.lender, loan.loanToken, loan.collateralToken)
         );
+        pools[oldPoolId].poolBalance += loan.debt + lenderInterest;
+        emit PoolBalanceUpdated(oldPoolId, pools[oldPoolId].poolBalance);
+
         // transfer the protocol fee to the governance
         IERC20(loan.loanToken).transfer(feeReceiver, protocolInterest);
 
@@ -410,13 +415,17 @@ contract Lender is Ownable {
         for (uint256 i = 0; i < refinances.length; i++) {
             uint256 loanId = refinances[i].loanId;
             bytes32 poolId = refinances[i].poolId;
-            uint256 debt = loans[loanId].debt;
-            uint256 collateral = loans[loanId].collateral;
+            bytes32 oldPoolId = keccak256(
+                abi.encode(loans[loanId].lender, loans[loanId].loanToken, loans[loanId].collateralToken)
+            );
+            uint256 debt = refinances[i].debt;
+            uint256 collateral = refinances[i].collateral;
 
             // get the loan info
             Loan memory loan = loans[loanId];
             // validate the loan
             if (msg.sender != loan.borrower) revert Unauthorized();
+
             // get the pool info
             Pool memory pool = pools[poolId];
             // validate the new loan
@@ -427,6 +436,7 @@ contract Lender is Ownable {
             if (debt < pool.minLoanSize) revert LoanTooSmall();
             uint256 loanRatio = (debt * 10 ** 18) / collateral;
             if (loanRatio > pool.maxLoanRatio) revert RatioTooHigh();
+
             // calculate the interest
             uint256 timeElapsed = block.timestamp - loan.startTimestamp;
             uint256 lenderInterest = ((loan.interestRate * loan.debt) / 10000) *
@@ -435,12 +445,9 @@ contract Lender is Ownable {
                 (timeElapsed / 365 days);
             uint256 debtToPay = loan.debt + lenderInterest + protocolInterest;
 
-            // first lets take our tokens from the new pool
-            IERC20(loan.loanToken).transferFrom(
-                pool.lender,
-                address(this),
-                debt
-            );
+            // first lets deduct our tokens from the new pool
+            pools[poolId].poolBalance -= debt;
+            emit PoolBalanceUpdated(poolId, pools[poolId].poolBalance);
 
             if (debtToPay > debt) {
                 // we owe more in debt so we need the borrower to give us more loan tokens
@@ -456,11 +463,10 @@ contract Lender is Ownable {
                 IERC20(loan.loanToken).transfer(msg.sender, debt - debtToPay);
             }
 
-            // transder loanTokens to old lender and gov from new lender
-            IERC20(loan.loanToken).transfer(
-                loan.lender,
-                loan.debt + lenderInterest
-            );
+            // update the old lenders pool
+            pools[oldPoolId].poolBalance += loan.debt + lenderInterest;
+            emit PoolBalanceUpdated(oldPoolId, pools[oldPoolId].poolBalance);
+            // transfer the protocol fee to governance
             IERC20(loan.loanToken).transfer(feeReceiver, protocolInterest);
 
             // update loan debt

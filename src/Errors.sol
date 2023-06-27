@@ -14,3 +14,4 @@ error AuctionEnded();
 error AuctionNotEnded();
 error RateTooHigh();
 error PoolTooSmall();
+error ZeroCollateral();

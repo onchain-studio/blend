@@ -205,6 +205,17 @@ contract LenderTest is Test {
         assertEq(startTime, block.timestamp);
     }
 
+    function testFail_startAuction() public {
+        test_borrow();
+
+        vm.startPrank(lender2);
+
+        uint256[] memory loanIds = new uint256[](1);
+        loanIds[0] = 0;
+
+        lender.startAuction(loanIds);
+    }
+
     function test_buyLoan() public {
         test_borrow();
         // accrue interest
@@ -356,7 +367,7 @@ contract LenderTest is Test {
 
         uint256 debt = lender.getLoanDebt(0);
 
-        assertEq(debt, 110*10**18);
+        assertEq(debt, 111*10**18);
     }
 
 }
