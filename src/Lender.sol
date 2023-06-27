@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./Errors.sol";
-import "./Structs.sol";
+import "./utils/Errors.sol";
+import "./utils/Structs.sol";
 
-import {IERC20} from "./IERC20.sol";
-import {Ownable} from "./Ownable.sol";
+import {IERC20} from "./interfaces/IERC20.sol";
+import {Ownable} from "./utils/Ownable.sol";
 
 contract Lender is Ownable {
     event PoolCreated(bytes32 indexed poolId, Pool pool);

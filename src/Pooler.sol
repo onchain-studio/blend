@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./Errors.sol";
-import "./Structs.sol";
+import "./utils/Errors.sol";
+import "./utils/Structs.sol";
 
-import {Ownable} from "./Ownable.sol";
+import {Ownable} from "./utils/Ownable.sol";
 import {Lender} from "./Lender.sol";
-import {IDataFeed} from "./IDataFeed.sol";
+import {IDataFeed} from "./interfaces/IDataFeed.sol";
 
 import {ERC20} from "solady/src/tokens/ERC20.sol";
-import {ISwapRouter} from "./ISwapRouter.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 
 contract Pooler is ERC20 {
     string private _name;
