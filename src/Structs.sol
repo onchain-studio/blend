@@ -18,6 +18,8 @@ struct Pool {
     uint256 auctionLength;
     /// @notice the interest rate per year in BIPs
     uint256 interestRate;
+    /// @notice the outstanding loans this pool has
+    uint256 outstandingLoans;
 }
 
 struct Borrow {
