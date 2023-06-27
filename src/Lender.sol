@@ -202,6 +202,18 @@ contract Lender is Ownable {
         pools[poolId].maxLoanRatio = maxLoanRatio;
     }
 
+    /// @notice update the interest rate for a pool
+    /// can only be called by the pool lender
+    /// @param poolId the id of the pool to update
+    /// @param interestRate the new interest rate
+    function updateInterestRate(bytes32 poolId, uint256 interestRate)
+        external
+    {
+        if (pools[poolId].lender != msg.sender) revert Unauthorized();
+        if (interestRate > MAX_INTEREST_RATE) revert PoolConfig();
+        pools[poolId].interestRate = interestRate;
+    }
+
     /// @notice borrow a loan from a pool
     /// can be called by anyone
     /// you are allowed to open many borrows at once

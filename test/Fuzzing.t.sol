@@ -61,7 +61,8 @@ contract LenderTest is Test {
             poolBalance: amount,
             maxLoanRatio: 2*10**18,
             auctionLength: auctionLength,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         if (amount > loanToken.balanceOf(address(lender1))) {
             vm.expectRevert();
@@ -83,7 +84,7 @@ contract LenderTest is Test {
                 )
             );
 
-            (,,,,uint256 poolBalance,,,) = lender.pools(poolId);
+            (,,,,uint256 poolBalance,,,,) = lender.pools(poolId);
             assertEq(poolBalance, amount);
         }
     }
@@ -100,7 +101,8 @@ contract LenderTest is Test {
             poolBalance: 1000*10**18,
             maxLoanRatio: 2*10**18,
             auctionLength: 1 days,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         bytes32 poolId = lender.setPool(p);
 
@@ -126,7 +128,7 @@ contract LenderTest is Test {
             lender.borrow(borrows);
             assertEq(loanToken.balanceOf(address(borrower)), debtAmount);
             assertEq(collateralToken.balanceOf(address(lender)), collateralAmount);
-            (,,,,uint256 poolBalance,,,) = lender.pools(poolId);
+            (,,,,uint256 poolBalance,,,,) = lender.pools(poolId);
             assertEq(poolBalance, 1000*10**18 - debtAmount);
         }
     }
@@ -142,11 +144,12 @@ contract LenderTest is Test {
             poolBalance: 1000*10**18,
             maxLoanRatio: 2*10**18,
             auctionLength: 1 days,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         bytes32 poolId = lender.setPool(p);
 
-        (,,,,uint256 poolBalance,,,) = lender.pools(poolId);
+        (,,,,uint256 poolBalance,,,,) = lender.pools(poolId);
         assertEq(poolBalance, 1000*10**18);
 
         vm.startPrank(borrower);
@@ -172,7 +175,7 @@ contract LenderTest is Test {
 
         assertEq(loanToken.balanceOf(address(borrower)), 100000*10**18 - interest - f);
         assertEq(collateralToken.balanceOf(address(lender)), 0);
-        (,,,,poolBalance,,,) = lender.pools(poolId);
+        (,,,,poolBalance,,,,) = lender.pools(poolId);
         assertEq(poolBalance, 1000*10**18 + interest);
     }
 
@@ -191,11 +194,12 @@ contract LenderTest is Test {
             poolBalance: 1000*10**18,
             maxLoanRatio: 2*10**18,
             auctionLength: 1 days,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         bytes32 poolId = lender.setPool(p);
 
-        (,,,,uint256 poolBalance,,,) = lender.pools(poolId);
+        (,,,,uint256 poolBalance,,,,) = lender.pools(poolId);
         assertEq(poolBalance, 1000*10**18);
 
         vm.startPrank(borrower);
@@ -225,7 +229,8 @@ contract LenderTest is Test {
             poolBalance: 1000*10**18,
             maxLoanRatio: 2*10**18,
             auctionLength: 1 days,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         lender.setPool(p2);
 
@@ -255,11 +260,12 @@ contract LenderTest is Test {
             poolBalance: 1000*10**18,
             maxLoanRatio: 2*10**18,
             auctionLength: 1 days,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         bytes32 poolId = lender.setPool(p);
 
-        (,,,,uint256 poolBalance,,,) = lender.pools(poolId);
+        (,,,,uint256 poolBalance,,,,) = lender.pools(poolId);
         assertEq(poolBalance, 1000*10**18);
 
         vm.startPrank(borrower);
@@ -308,11 +314,12 @@ contract LenderTest is Test {
             poolBalance: 1000*10**18,
             maxLoanRatio: 2*10**18,
             auctionLength: 1 days,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         bytes32 poolId = lender.setPool(p);
 
-        (,,,,uint256 poolBalance,,,) = lender.pools(poolId);
+        (,,,,uint256 poolBalance,,,,) = lender.pools(poolId);
         assertEq(poolBalance, 1000*10**18);
 
         vm.startPrank(borrower);
@@ -334,7 +341,8 @@ contract LenderTest is Test {
             poolBalance: 1000*10**18,
             maxLoanRatio: 2*10**18,
             auctionLength: 1 days,
-            interestRate: 1000
+            interestRate: 1000,
+            outstandingLoans: 0
         });
         lender.setPool(p2);
 
@@ -365,10 +373,6 @@ contract LenderTest is Test {
             lender.refinance(rs);
         } else {
             lender.refinance(rs);
-            // assertEq(loanToken.balanceOf(address(borrower)), debt);
-            // assertEq(collateralToken.balanceOf(address(lender)), collateral);
-            // (,,,,poolBalance,,,) = lender.pools(poolId);
-            // assertEq(poolBalance, 1000*10**18 - debt);
         }
 
     }
