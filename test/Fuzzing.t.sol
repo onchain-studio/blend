@@ -165,9 +165,8 @@ contract LenderTest is Test {
         vm.warp(block.timestamp + loanLength);
 
         uint256 debt = lender.getLoanDebt(0);
-        uint256 interest = ((p.interestRate * b.debt) / 10000) *
-            (loanLength / 365 days);
-        uint256 f = ((lender.fee() * b.debt) / 10000) * (loanLength / 365 days);
+        uint256 interest = ((p.interestRate * b.debt * loanLength) / 10000 / 365 days);
+        uint256 f = ((lender.fee() * b.debt * loanLength) / 10000 / 365 days);
 
         uint256[] memory loanIds = new uint256[](1);
         loanIds[0] = 0;
