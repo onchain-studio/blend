@@ -19,10 +19,13 @@ contract Staking is Ownable {
     mapping(address => uint256) public balances;
     mapping(address => uint256) public claimable;
     
-    IERC20 public constant TKN = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
-    IERC20 public constant WETH = IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490);
+    IERC20 public immutable TKN;
+    IERC20 public immutable WETH;
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address _token, address _weth) Ownable(msg.sender) {
+        TKN = IERC20(_token);
+        WETH = IERC20(_weth);
+    }
     
     function deposit(uint _amount) external {
         TKN.transferFrom(msg.sender, address(this), _amount);
