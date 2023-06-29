@@ -10,16 +10,22 @@ interface FeeDistribution {
 
 contract Staking is Ownable {
 
+    /// @notice the balance of reward tokens
     uint256 public balance = 0;
+    /// @notice the index of the last update
     uint256 public index = 0;
     
+    /// @notice mapping of user indexes
     mapping(address => uint256) public supplyIndex;
 
     /// @notice mapping of user balances
     mapping(address => uint256) public balances;
+    /// @notice mapping of user claimable rewards
     mapping(address => uint256) public claimable;
     
+    /// @notice the staking token
     IERC20 public immutable TKN;
+    /// @notice the reward token
     IERC20 public immutable WETH;
 
     constructor(address _token, address _weth) Ownable(msg.sender) {
@@ -27,18 +33,23 @@ contract Staking is Ownable {
         WETH = IERC20(_weth);
     }
     
+    /// @notice deposit tokens to stake
+    /// @param _amount the amount to deposit
     function deposit(uint _amount) external {
         TKN.transferFrom(msg.sender, address(this), _amount);
         updateFor(msg.sender);
         balances[msg.sender] += _amount;
     }
 
+    /// @notice withdraw tokens from stake
+    /// @param _amount the amount to withdraw
     function withdraw(uint _amount) external {
         updateFor(msg.sender);
         balances[msg.sender] -= _amount;
         TKN.transfer(msg.sender, _amount);
     }
     
+    /// @notice claim rewards
     function claim() external {
         updateFor(msg.sender);
         WETH.transfer(msg.sender, claimable[msg.sender]);
@@ -46,6 +57,7 @@ contract Staking is Ownable {
         balance = WETH.balanceOf(address(this));
     }
     
+    /// @notice update the global index of earned rewards
     function update() public {
         uint256 totalSupply = TKN.balanceOf(address(this));
         if (totalSupply > 0) {
@@ -63,6 +75,8 @@ contract Staking is Ownable {
         }
     }
     
+    /// @notice update the index for a user
+    /// @param recipient the user to update
     function updateFor(address recipient) public {
         update();
         uint256 _supplied = balances[recipient];
