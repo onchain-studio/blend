@@ -109,7 +109,7 @@ contract Lender is Ownable {
     /// @notice set the info for a pool
     /// updates pool info for msg.sender
     /// @param p the new pool info
-    function setPool(Pool calldata p) external returns (bytes32 poolId) {
+    function setPool(Pool calldata p) public returns (bytes32 poolId) {
         // validate the pool
         if (
             p.lender != msg.sender ||
@@ -430,6 +430,15 @@ contract Lender is Ownable {
             block.timestamp
         );
         emit LoanBought(loanId);
+    }
+
+    /// @notice make a pool and buy the loan in one transaction
+    /// can be called by anyone
+    /// @param p the pool info
+    /// @param loanId the id of the loan to refinance
+    function zapBuyLoan(Pool calldata p, uint256 loanId) external {
+        setPool(p);
+        buyLoan(loanId, p.interestRate);
     }
 
     /// @notice sieze a loan after a failed refinance auction
