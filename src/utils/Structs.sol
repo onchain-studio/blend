@@ -64,3 +64,16 @@ struct Refinance {
     /// @notice the new desired collateral amount
     uint256 collateral;
 }
+
+struct Staked {
+    /// @notice the amount of tokens staked
+    uint256 amount;
+    /// @notice the timestamp the stake unlocks
+    uint256 unlock;
+    /// @notice the multiplier of the stake based on lock length
+    uint256 multiplier;
+    /// @notice the virtual balance based on the multipier
+    uint256 virtualBalance;
+    /// @notice the amount of points currently accumulated
+    uint256 points;
+}
