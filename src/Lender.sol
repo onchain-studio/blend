@@ -11,6 +11,8 @@ contract Lender is Ownable {
     event PoolCreated(bytes32 indexed poolId, Pool pool);
     event PoolUpdated(bytes32 indexed poolId, Pool pool);
     event PoolBalanceUpdated(bytes32 indexed poolId, uint256 newBalance);
+    event PoolInterestRateUpdated(bytes32 indexed poolId, uint256 newInterestRate);
+    event PoolMaxLoanRatioUpdated(bytes32 indexed poolId, uint256 newMaxLoanRatio);
     event Borrowed(
         address indexed borrower,
         address indexed lender,
@@ -193,6 +195,7 @@ contract Lender is Ownable {
         if (pools[poolId].lender != msg.sender) revert Unauthorized();
         if (maxLoanRatio == 0) revert PoolConfig();
         pools[poolId].maxLoanRatio = maxLoanRatio;
+        emit PoolMaxLoanRatioUpdated(poolId, maxLoanRatio);
     }
 
     /// @notice update the interest rate for a pool
@@ -203,6 +206,7 @@ contract Lender is Ownable {
         if (pools[poolId].lender != msg.sender) revert Unauthorized();
         if (interestRate > MAX_INTEREST_RATE) revert PoolConfig();
         pools[poolId].interestRate = interestRate;
+        emit PoolInterestRateUpdated(poolId, interestRate);
     }
 
     /// @notice borrow a loan from a pool
