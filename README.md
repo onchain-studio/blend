@@ -1,6 +1,8 @@
 # Beedle
 Oracle free peer to peer perpetual lending
 
+For more in-depth information please see our [documentation]()
+
 # build
 `forge init`
 
