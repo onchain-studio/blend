@@ -11,8 +11,14 @@ contract Lender is Ownable {
     event PoolCreated(bytes32 indexed poolId, Pool pool);
     event PoolUpdated(bytes32 indexed poolId, Pool pool);
     event PoolBalanceUpdated(bytes32 indexed poolId, uint256 newBalance);
-    event PoolInterestRateUpdated(bytes32 indexed poolId, uint256 newInterestRate);
-    event PoolMaxLoanRatioUpdated(bytes32 indexed poolId, uint256 newMaxLoanRatio);
+    event PoolInterestRateUpdated(
+        bytes32 indexed poolId,
+        uint256 newInterestRate
+    );
+    event PoolMaxLoanRatioUpdated(
+        bytes32 indexed poolId,
+        uint256 newMaxLoanRatio
+    );
     event Borrowed(
         address indexed borrower,
         address indexed lender,
