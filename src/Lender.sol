@@ -334,6 +334,88 @@ contract Lender is Ownable {
     /*                         REFINANCE                          */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+    /// @notice give your loans to another pool
+    /// can only be called by the lender
+    /// @param loanIds the ids of the loans to give
+    /// @param poolIds the id of the pools to give to
+    function giveLoan(
+        uint256[] calldata loanIds,
+        bytes32[] calldata poolIds
+    ) external {
+        for (uint256 i = 0; i < loanIds.length; i++) {
+            uint256 loanId = loanIds[i];
+            bytes32 poolId = poolIds[i];
+            // get the loan info
+            Loan memory loan = loans[loanId];
+            // validate the loan
+            if (msg.sender != loan.lender) revert Unauthorized();
+            // get the pool info
+            Pool memory pool = pools[poolId];
+            // validate the new loan
+            if (pool.loanToken != loan.loanToken) revert TokenMismatch();
+            if (pool.collateralToken != loan.collateralToken)
+                revert TokenMismatch();
+            // new interest rate cannot be higher than old interest rate
+            if (pool.interestRate > loan.interestRate) revert RateTooHigh();
+            // calculate the interest
+            (
+                uint256 lenderInterest,
+                uint256 protocolInterest
+            ) = _calculateInterest(loan);
+            uint256 totalDebt = loan.debt + lenderInterest + protocolInterest;
+            if (pool.poolBalance < totalDebt) revert PoolTooSmall();
+            if (totalDebt < pool.minLoanSize) revert LoanTooSmall();
+            uint256 loanRatio = (totalDebt * 10 ** 18) / loan.collateral;
+            if (loanRatio > pool.maxLoanRatio) revert RatioTooHigh();
+            // update the pool balance of the new lender
+            _updatePoolBalance(poolId, pool.poolBalance - totalDebt);
+            pools[poolId].outstandingLoans += totalDebt;
+
+            // update the pool balance of the old lender
+            bytes32 oldPoolId = getPoolId(
+                loan.lender,
+                loan.loanToken,
+                loan.collateralToken
+            );
+            _updatePoolBalance(
+                oldPoolId,
+                pools[oldPoolId].poolBalance + loan.debt + lenderInterest
+            );
+            pools[oldPoolId].outstandingLoans -= loan.debt;
+
+
+            // transfer the protocol fee to the governance
+            IERC20(loan.loanToken).transfer(feeReceiver, protocolInterest);
+
+            emit Repaid(
+                loan.borrower,
+                loan.lender,
+                loanId,
+                loan.debt + lenderInterest + protocolInterest,
+                loan.collateral,
+                loan.interestRate,
+                loan.startTimestamp
+            );
+
+            // update the loan with the new info
+            loans[loanId].lender = pool.lender;
+            loans[loanId].interestRate = pool.interestRate;
+            loans[loanId].startTimestamp = block.timestamp;
+            loans[loanId].auctionStartTimestamp = type(uint256).max;
+            loans[loanId].debt = totalDebt;
+
+            emit Borrowed(
+                loan.borrower,
+                pool.lender,
+                loanId,
+                loans[loanId].debt,
+                loans[loanId].collateral,
+                pool.interestRate,
+                block.timestamp
+            );
+        }
+    }
+
     /// @notice start a refinance auction
     /// can only be called by the lender
     /// @param loanIds the ids of the loans to refinance
