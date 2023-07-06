@@ -329,6 +329,51 @@ contract LenderTest is Test {
     /*                         REFINANCE                          */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+    function test_giveLoan() public {
+        test_borrow();
+
+        vm.startPrank(lender2);
+        Pool memory p = Pool({
+            lender: lender2,
+            loanToken: address(loanToken),
+            collateralToken: address(collateralToken),
+            minLoanSize: 100*10**18,
+            poolBalance: 1000*10**18,
+            maxLoanRatio: 2*10**18,
+            auctionLength: 1 days,
+            interestRate: 1000,
+            outstandingLoans: 0
+        });
+        lender.setPool(p);
+
+        uint256[] memory loanIds = new uint256[](1);
+        loanIds[0] = 0;
+        bytes32[] memory poolIds = new bytes32[](1);
+        poolIds[0] = keccak256(
+            abi.encode(
+                address(lender2),
+                address(loanToken),
+                address(collateralToken)
+            )
+        );
+
+        vm.startPrank(lender1);
+        lender.giveLoan(loanIds, poolIds);
+
+        
+        (,,,,uint256 poolBalance,,,,) = lender.pools(poolIds[0]);
+        assertEq(poolBalance, 900*10**18);
+        bytes32 poolId = keccak256(
+            abi.encode(
+                address(lender1),
+                address(loanToken),
+                address(collateralToken)
+            )
+        );
+        (,,,,poolBalance,,,,) = lender.pools(poolId);
+        assertEq(poolBalance, 1000*10**18);
+    }
+
     function test_refinance() public {
         test_borrow();
 

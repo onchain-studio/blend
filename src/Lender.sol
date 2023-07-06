@@ -357,6 +357,8 @@ contract Lender is Ownable {
                 revert TokenMismatch();
             // new interest rate cannot be higher than old interest rate
             if (pool.interestRate > loan.interestRate) revert RateTooHigh();
+            // auction length cannot be shorter than old auction length
+            if (pool.auctionLength < loan.auctionLength) revert AuctionTooShort();
             // calculate the interest
             (
                 uint256 lenderInterest,
@@ -382,7 +384,6 @@ contract Lender is Ownable {
                 pools[oldPoolId].poolBalance + loan.debt + lenderInterest
             );
             pools[oldPoolId].outstandingLoans -= loan.debt;
-
 
             // transfer the protocol fee to the governance
             IERC20(loan.loanToken).transfer(feeReceiver, protocolInterest);
