@@ -59,8 +59,10 @@ contract Lender is Ownable {
     uint256 public constant MAX_INTEREST_RATE = 100000;
     /// @notice the maximum auction length is 3 days
     uint256 public constant MAX_AUCTION_LENGTH = 3 days;
-    /// @notice the fee taken by the governance in BIPs
-    uint256 public fee = 100;
+    /// @notice the fee taken by the protocol in BIPs
+    uint256 public lenderFee = 1000;
+    /// @notice the fee taken by the protocol in BIPs
+    uint256 public borrowerFee = 50;
     /// @notice the address of the fee receiver
     address public feeReceiver;
 
@@ -76,12 +78,20 @@ contract Lender is Ownable {
     /*                         GOVERNANCE                         */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    /// @notice set the fee
+    /// @notice set the lender fee
     /// can only be called by the owner
     /// @param _fee the new fee
-    function setFee(uint256 _fee) external onlyOwner {
+    function setLenderFee(uint256 _fee) external onlyOwner {
         if (_fee > 5000) revert FeeTooHigh();
-        fee = _fee;
+        lenderFee = _fee;
+    }
+
+    /// @notice set the borrower fee
+    /// can only be called by the owner
+    /// @param _fee the new fee
+    function setBorrowerFee(uint256 _fee) external onlyOwner {
+        if (_fee > 500) revert FeeTooHigh();
+        borrowerFee = _fee;
     }
 
     /// @notice set the fee receiver
@@ -251,8 +261,12 @@ contract Lender is Ownable {
             // update the pool balance
             _updatePoolBalance(poolId, pools[poolId].poolBalance - debt);
             pools[poolId].outstandingLoans += debt;
+            // calculate the fees
+            uint256 fees = (debt * borrowerFee) / 10000;
+            // transfer fees
+            IERC20(loan.loanToken).transfer(feeReceiver, fees);
             // transfer the loan tokens from the pool to the borrower
-            IERC20(loan.loanToken).transfer(msg.sender, debt);
+            IERC20(loan.loanToken).transfer(msg.sender, debt - fees);
             // transfer the collateral tokens from the borrower to the contract
             IERC20(loan.collateralToken).transferFrom(
                 msg.sender,
@@ -550,7 +564,7 @@ contract Lender is Ownable {
                 loan.auctionStartTimestamp + loan.auctionLength
             ) revert AuctionNotEnded();
             // calculate the fee
-            uint256 govFee = (fee * loan.collateral) / 10000;
+            uint256 govFee = (borrowerFee * loan.collateral) / 10000;
             // transfer the protocol fee to governance
             IERC20(loan.collateralToken).transfer(feeReceiver, govFee);
             // transfer the collateral tokens from the contract to the lender
@@ -711,7 +725,8 @@ contract Lender is Ownable {
     ) internal view returns (uint256 interest, uint256 fees) {
         uint256 timeElapsed = block.timestamp - l.startTimestamp;
         interest = (l.interestRate * l.debt * timeElapsed) / 10000 / 365 days;
-        fees = (fee * l.debt * timeElapsed) / 10000 / 365 days;
+        fees = (lenderFee * interest) / 10000 / 365 days;
+        interest -= fees;
     }
 
     /// @notice update the balance of a pool and emit the event
