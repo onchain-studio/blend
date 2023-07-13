@@ -461,8 +461,8 @@ contract Lender is Ownable {
     /// @notice buy a loan in a refinance auction
     /// can be called by anyone but you must have a pool with tokens
     /// @param loanId the id of the loan to refinance
-    /// @param rate the interest rate the buyer is willing to accept
-    function buyLoan(uint256 loanId, uint256 rate) public {
+    /// @param poolId the pool to accept
+    function buyLoan(uint256 loanId, bytes32 poolId) public {
         // get the loan info
         Loan memory loan = loans[loanId];
         // validate the loan
@@ -475,18 +475,12 @@ contract Lender is Ownable {
         uint256 currentAuctionRate = (MAX_INTEREST_RATE * timeElapsed) /
             loan.auctionLength;
         // validate the rate
-        if (rate > currentAuctionRate) revert RateTooHigh();
+        if (pools[poolId].interestRate > currentAuctionRate) revert RateTooHigh();
         // calculate the interest
         (uint256 lenderInterest, uint256 protocolInterest) = _calculateInterest(
             loan
         );
 
-        // check if the buyer has a pool with tokens
-        bytes32 poolId = getPoolId(
-            msg.sender,
-            loan.loanToken,
-            loan.collateralToken
-        );
         // reject if the pool is not big enough
         uint256 totalDebt = loan.debt + lenderInterest + protocolInterest;
         if (pools[poolId].poolBalance < totalDebt) revert PoolTooSmall();
@@ -522,7 +516,7 @@ contract Lender is Ownable {
 
         // update the loan with the new info
         loans[loanId].lender = msg.sender;
-        loans[loanId].interestRate = rate;
+        loans[loanId].interestRate = pools[poolId].interestRate;
         loans[loanId].startTimestamp = block.timestamp;
         loans[loanId].auctionStartTimestamp = type(uint256).max;
         loans[loanId].debt = totalDebt;
@@ -533,7 +527,7 @@ contract Lender is Ownable {
             loanId,
             loans[loanId].debt,
             loans[loanId].collateral,
-            rate,
+            pools[poolId].interestRate,
             block.timestamp
         );
         emit LoanBought(loanId);
@@ -544,8 +538,8 @@ contract Lender is Ownable {
     /// @param p the pool info
     /// @param loanId the id of the loan to refinance
     function zapBuyLoan(Pool calldata p, uint256 loanId) external {
-        setPool(p);
-        buyLoan(loanId, p.interestRate);
+        bytes32 poolId = setPool(p);
+        buyLoan(loanId, poolId);
     }
 
     /// @notice sieze a loan after a failed refinance auction
@@ -631,7 +625,14 @@ contract Lender is Ownable {
             ) = _calculateInterest(loan);
             uint256 debtToPay = loan.debt + lenderInterest + protocolInterest;
 
-            // first lets deduct our tokens from the new pool
+            // update the old lenders pool
+            _updatePoolBalance(
+                oldPoolId,
+                pools[oldPoolId].poolBalance + loan.debt + lenderInterest
+            );
+            pools[oldPoolId].outstandingLoans -= loan.debt;
+
+            // now lets deduct our tokens from the new pool
             _updatePoolBalance(poolId, pools[poolId].poolBalance - debt);
             pools[poolId].outstandingLoans += debt;
 
@@ -645,16 +646,12 @@ contract Lender is Ownable {
                 );
             } else if (debtToPay < debt) {
                 // we have excess loan tokens so we give some back to the borrower
+                // first we take our borrower fee
+                uint256 fee = (borrowerFee * (debt - debtToPay)) / 10000;
+                IERC20(loan.loanToken).transfer(feeReceiver, fee);
                 // transfer the loan tokens from the contract to the borrower
-                IERC20(loan.loanToken).transfer(msg.sender, debt - debtToPay);
+                IERC20(loan.loanToken).transfer(msg.sender, debt - debtToPay - fee);
             }
-
-            // update the old lenders pool
-            _updatePoolBalance(
-                oldPoolId,
-                pools[oldPoolId].poolBalance + loan.debt + lenderInterest
-            );
-            pools[oldPoolId].outstandingLoans -= loan.debt;
             // transfer the protocol fee to governance
             IERC20(loan.loanToken).transfer(feeReceiver, protocolInterest);
 
@@ -725,7 +722,7 @@ contract Lender is Ownable {
     ) internal view returns (uint256 interest, uint256 fees) {
         uint256 timeElapsed = block.timestamp - l.startTimestamp;
         interest = (l.interestRate * l.debt * timeElapsed) / 10000 / 365 days;
-        fees = (lenderFee * interest) / 10000 / 365 days;
+        fees = (lenderFee * interest) / 10000;
         interest -= fees;
     }
 
